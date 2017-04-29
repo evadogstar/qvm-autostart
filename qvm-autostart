@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+__author__ = "Eva Dogstar"
+__copyright__ = "Copyright 2017+, Eva Dogstar, Qubes OS"
+__license__ = "GPLv2"
+__version__ = "0.01"
+
+import os
+import sys
+import argparse
+from subprocess import call, Popen, PIPE, check_output
+
+def check_program_exists(name):
+    p = Popen(['/usr/bin/which', name], stdout=PIPE, stderr=PIPE)
+    p.communicate()
+    return p.returncode == 0
+
+parser = argparse.ArgumentParser(description='Setup applications to start automaticaly with AppVM.')
+parser.add_argument('--remove', '-r', action='store_true', default=False,
+                    help='remove application')
+parser.add_argument('--noterm', '-n', action='store_false', default=True,
+                    help='remove application')
+parser.add_argument('--custom', '-c',
+                    help='remove application')
+parser.add_argument('application', help='Application to autostart with VM (or custom command)')
+args = parser.parse_args()
+
+# vars
+autostartdir = '/home/user/.config/autostart/'
+desktopapp = '/usr/share/applications/' + args.application + '.desktop'
+destinationapp = autostartdir + args.application + '.desktop'
+
+if args.remove == True and os.path.exists(destinationapp):
+   # shortcut exists link it
+   rm = ['rm', destinationapp]
+   res1, err1 = Popen(rm, stdout=PIPE, stderr=PIPE).communicate()
+#   print res1 + err1	
+   print 'Removed.'
+   exit()
+elif args.remove == True:
+   print 'No app to remove.'
+   exit()
+
+
+# test .desktop link exists
+if os.path.exists(desktopapp) and not os.path.exists(destinationapp):
+    if not os.path.exists(autostartdir):
+        os.makedirs(autostartdir)
+    lns = ['ln', '-s', desktopapp, destinationapp]
+    res1, err1 = Popen(lns, stdout=PIPE, stderr=PIPE).communicate()
+    print 'Done.'
+    exit()
+elif os.path.exists(destinationapp): 
+	exit()
+#else:
+#	print 'not installeted'
+
+# program exists, but .desktop not exists
+if check_program_exists(args.application) or args.custom != False :
+#    print 'exists'
+    if not os.path.exists(autostartdir):
+        os.makedirs(autostartdir)    
+    with open(destinationapp, "w+") as text_file:
+        text_file.write("[Desktop Entry]\n")
+        text_file.write("Version=1.0\n")
+        text_file.write("Type=Application\n".format(args.application))
+        text_file.write("Name={0}\n".format(args.application))
+        text_file.write("GenericName={0}\n".format(args.application))
+        if args.custom:
+            text_file.write("Exec={0}\n".format(args.custom))
+        else:
+            text_file.write("Exec={0}\n".format(args.application))        	
+        text_file.write("Terminal={0}\n".format(args.noterm))
+        print 'Done.'
+
+# [Desktop Entry]
+# #Version=1.0
+# Name=xcompmgr
+# GenericName=xcompmgr
+# Comment=xcompmgr
+# Exec=/path/to/xcompmgr
+# Terminal=true
+# Type=Application
+# X-Desktop-File-Install-Version=0.22
+
